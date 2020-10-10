@@ -9,6 +9,31 @@ const multer=require('multer');
 const path = require('path');
 const fs = require('fs');
 
+//http://localhost:8000/user/login
+router.post('/login',(req,res)=>{
+  console.log(req.body);
+  User.findOne({email:req.body.email},(err,doc)=>{
+    if(!empty(doc)){
+      if(doc.password==(sha1(req.body.password))){
+          const token=jwt.sign({
+            email:doc.email
+          },process.env.JWT_KEY||'tokenclave',{
+            expiresIn:'2h'
+          });
+          res.json({
+            message:'autenticacion exitosa',
+            admin:doc.admin,
+            token:token
+          });
+      }else {
+        res.json({message:'el password es incorrecto'});
+      }
+    }else{
+      res.json({message:'el email es incorrecto'});
+    }
+  });
+});
+
 
 const auth=require('./ver');const storage = multer.diskStorage({
     destination: function (res, file, cb) {
@@ -25,7 +50,7 @@ const auth=require('./ver');const storage = multer.diskStorage({
 })
 var upload = multer({storage: storage });
 
-
+//http://localhost:8000/user/
 router.get('/',(req,res)=>{
     User.find({},(err,docs)=>{
       if(empty(docs)){
@@ -35,7 +60,23 @@ router.get('/',(req,res)=>{
       }
     });
 });
+//http://localhost:8000/user/
+router.post('/',async(req,res)=>{
+  console.log(req.body);
+  req.body.password=(sha1(req.body.password));
+  let ins=new User(req.body);
+  let result=await ins.save();
+  res.json({message:'usuario insertado'});
+});
 
+router.delete('/:id',(req,res)=>{
+  let id=req.params.id;
+  User.findByIdAndRemove(id,()=>{
+    res.json({message:'usuario eliminado'});
+  });
+});
+
+http://localhost:8000/user/subir
 router.post('/subir',upload.array('img', 12),async(req,res)=>{
     let imgSet=[];
     if(!empty(req.files)){
@@ -50,45 +91,6 @@ router.post('/subir',upload.array('img', 12),async(req,res)=>{
     let result =await ins.save();
     res.json({
       message:'img ins'
-    });
-});
-
-router.post('/',async(req,res)=>{
-    console.log(req.body);
-    req.body.password=(sha1(req.body.password));
-    let ins=new User(req.body);
-    let result=await ins.save();
-    res.json({message:'usuario insertado'});
-});
-
-router.post('/login',(req,res)=>{
-    console.log(req.body);
-    User.findOne({email:req.body.email},(err,doc)=>{
-      if(!empty(doc)){
-        if(doc.password==(sha1(req.body.password))){
-            const token=jwt.sign({
-              email:doc.email
-            },process.env.JWT_KEY||'tokenclave',{
-              expiresIn:'2h'
-            });
-            res.json({
-              message:'autenticacion exitosa',
-              admin:doc.admin,
-              token:token
-            });
-        }else {
-          res.json({message:'el password es incorrecto'});
-        }
-      }else{
-        res.json({message:'el email es incorrecto'});
-      }
-    });
-});
-
-router.delete('/:id',(req,res)=>{
-    let id=req.params.id;
-    User.findByIdAndRemove(id,()=>{
-      res.json({message:'usuario eliminado'});
     });
 });
 
